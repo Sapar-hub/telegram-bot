@@ -1,14 +1,14 @@
 import os
 import telebot
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 # Get your bot token from Railway environment variables
 TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
-
+calendar_id = os.environ['CALENDAR_ID']
 
 def get_calendar_service():
     # Build the service
@@ -22,7 +22,7 @@ def get_calendar_service():
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "👋 Hello! I'm alive on Railway.")
+    bot.send_message(message.chat.id, "👋 Привет! Я живу в Railway.")
 
 
 
@@ -40,48 +40,51 @@ def add_event(message):
         creds = Credentials.from_authorized_user_info(token_info)
         service = build('calendar', 'v3', credentials=creds)
 
-        calendar_id = os.environ['CALENDAR_ID']
 
         event = {
             'summary': desc,
             'start': {'dateTime': dt.isoformat(), 'timeZone': 'Asia/Almaty'},
             'end': {
-                'dateTime': (dt + datetime.timedelta(hours=1)).isoformat(),  # 1-hour default
-                'timeZone': 'Asia/Almaty'
+                'dateTime': (dt + timedelta(hours=1)).isoformat(),  # 1-hour default
+                'timeZone': 'Europe/Moscow'
             },
         }
 
         event = service.events().insert(calendarId=calendar_id, body=event).execute()
 
-        bot.send_message(message.chat.id, f"📅 Event created: {event.get('htmlLink')}")
+        bot.send_message(message.chat.id, f"📅 Мероприятие добавлена в календарь: {event.get('htmlLink')}")
     except Exception as e:
         print("Error:", e)
-        bot.send_message(message.chat.id, "⚠️ Could not create event. Check format: /addevent 25.05 15:00 Meeting")
+        bot.send_message(message.chat.id, "⚠️ Не удалось добавить событие. Проверьте формат: /addevent 25.05 15:00 Встреча")
 
 
-@bot.message_handler(commands=['listevent'])
+@bot.message_handler(commands=['listevents'])
 def list_event(message):
     try:
         service = get_calendar_service()
-        now = datetime.datetime.utcnow().isoformat() + 'Z'
+        now = datetime.utcnow().isoformat() + 'Z'
 
         events_result = service.events().list(
-            calendarId='primary', timeMin=now,
+            calendarId=calendar_id, timeMin=now,
             maxResults=5, singleEvents=True,
             orderBy='startTime'
         ).execute()
 
         
         events = events_result.get('items', [])
-        bot.send_message(message.chat.id,"✅ Google Calendar connected.")
+       
         for e in events:
-            bot.send_message(message.chat.id,e['summary'], e['start'])
+            start_time = e['start'].get('dateTime') or e['start'].get('date')
+            bot.send_message(message.chat.id, f"📅 {e['summary']} в {start_time}")
+
     except Exception as e:
         print(e)
-        bot.send_message(message.chat.id, "❌ Failed to list event.")
-
+        bot.send_message(message.chat.id, "❌ Ошибка парсинга.")
+        import traceback
+        traceback.print_exc()
+        bot.send_message(message.chat.id, f"❌ :\n{str(e)}")
 
 
     
-print("Bot is running...")
+print("Бот работает...")
 bot.polling()
