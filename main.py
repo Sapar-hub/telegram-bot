@@ -3,7 +3,7 @@ import telebot
 from datetime import datetime
 
 # Get your bot token from Railway environment variables
-TOKEN = os.getenv("7365413378:AAHCuNJ4JcHYoXrwRGYte6qowI6zlumryR4")
+TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
