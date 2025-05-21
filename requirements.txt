@@ -1,2 +1,4 @@
 pyTelegramBotAPI
 telebot
+google.oauth2.credentials
+googleapiclient.discovery
